@@ -1,3 +1,4 @@
+import { ThreeElements } from '@react-three/fiber';
 
 export interface GameState {
   speed: number;
@@ -26,4 +27,12 @@ export interface MobileInputState {
     stickY: number; // -1 to 1
     throttle: number; // 0 to 1
     firing: boolean;
+}
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements extends ThreeElements {
+        primitive: any;
+    }
+  }
 }

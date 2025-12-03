@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { Instance, Instances } from '@react-three/drei';
+import '../types';
 
 const Terrain: React.FC = () => {
   
