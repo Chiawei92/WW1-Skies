@@ -4,9 +4,10 @@ import { MobileInputState } from '../types';
 
 interface MobileControlsProps {
     inputRef: React.MutableRefObject<MobileInputState>;
+    onTogglePause: () => void;
 }
 
-const MobileControls: React.FC<MobileControlsProps> = ({ inputRef }) => {
+const MobileControls: React.FC<MobileControlsProps> = ({ inputRef, onTogglePause }) => {
     // Joystick State
     const joystickRef = useRef<HTMLDivElement>(null);
     const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
@@ -101,6 +102,16 @@ const MobileControls: React.FC<MobileControlsProps> = ({ inputRef }) => {
 
     return (
         <div className="absolute inset-0 pointer-events-none z-50 flex flex-col justify-end pb-8 px-8">
+            {/* Pause Button - Top Right */}
+            <div className="absolute top-6 right-6 pointer-events-auto">
+                 <button
+                    onClick={onTogglePause}
+                    className="w-10 h-10 rounded-full bg-white/10 border border-white/20 backdrop-blur-md flex items-center justify-center active:bg-white/20 transition-colors"
+                 >
+                    <span className="text-white font-bold text-xs tracking-widest">||</span>
+                 </button>
+            </div>
+
             <div className="flex justify-between items-end w-full">
                 
                 {/* Left Stick Area */}

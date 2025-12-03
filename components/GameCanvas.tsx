@@ -203,7 +203,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ controlMode, setControlMode, di
         )}
       </Canvas>
       {!paused && <HUD telemetry={telemetry} score={score} hp={playerHp} isMobile={isMobile} />}
-      {!paused && isMobile && <MobileControls inputRef={mobileInputRef} />}
+      {!paused && isMobile && <MobileControls inputRef={mobileInputRef} onTogglePause={() => setPaused(true)} />}
     </>
   );
 };

@@ -457,13 +457,8 @@ const Airplane: React.FC<AirplaneProps> = ({
     if (isMobile) {
         // Mobile Joystick
         targetPitch = mobileInputRef.current.stickY;
-        // User requested to fix "reversed" roll. 
-        // Previously we had `-mobileInputRef.current.stickX`.
-        // If Stick is Right (X > 0). Right Roll = Clockwise = Negative Z rotation.
-        // If the user says it's reversed, they expect Stick Right = Roll Right.
-        // If the previous code was inverted, maybe the input from joystick wasn't what we thought.
-        // Let's remove the inversion.
-        targetRoll = mobileInputRef.current.stickX;
+        // Fix roll: Right stick (positive X) should roll right (negative Z rotation in Three.js)
+        targetRoll = -mobileInputRef.current.stickX;
     } else if (controlMode === 'keyboard') {
         targetPitch = (keys.current['s'] ? 1 : 0) - (keys.current['w'] ? 1 : 0);
         targetRoll = (keys.current['d'] ? -1 : 0) + (keys.current['a'] ? 1 : 0);

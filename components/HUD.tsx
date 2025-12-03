@@ -46,7 +46,7 @@ const HUD: React.FC<HUDProps> = ({ telemetry, score, hp, isMobile }) => {
              </div>
 
              {/* Right Group (Score / Altitude on Mobile) */}
-             <div className="text-right flex flex-col items-end gap-2">
+             <div className={`text-right flex flex-col items-end gap-2 ${isMobile ? 'mt-14' : ''}`}>
                  <div>
                      <h2 className="text-lg md:text-2xl font-bold text-yellow-400 drop-shadow-md font-mono">任务 01</h2>
                      <p className="text-xs md:text-sm text-white drop-shadow-md">分数: <span className="text-yellow-300 font-bold">{score}</span></p>
