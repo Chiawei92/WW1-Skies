@@ -36,7 +36,15 @@ const MobileControls: React.FC<MobileControlsProps> = ({ inputRef }) => {
 
     const handleStickMove = (e: React.TouchEvent) => {
         if (touchId === null) return;
-        const touch = Array.from(e.changedTouches).find((t: React.Touch) => t.identifier === touchId);
+        
+        let touch: React.Touch | undefined;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === touchId) {
+                touch = e.changedTouches[i];
+                break;
+            }
+        }
+
         if (touch) {
             updateStick(touch.clientX, touch.clientY);
         }
@@ -65,7 +73,14 @@ const MobileControls: React.FC<MobileControlsProps> = ({ inputRef }) => {
     };
 
     const handleStickEnd = (e: React.TouchEvent) => {
-        const touch = Array.from(e.changedTouches).find((t: React.Touch) => t.identifier === touchId);
+        let touch: React.Touch | undefined;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === touchId) {
+                touch = e.changedTouches[i];
+                break;
+            }
+        }
+
         if (touch) {
             setTouchId(null);
             setJoystickPos({ x: 0, y: 0 });

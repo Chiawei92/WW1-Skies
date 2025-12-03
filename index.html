@@ -22,21 +22,26 @@
         }
       }
     </style>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "vite": "https://aistudiocdn.com/vite@^7.2.6",
     "three": "https://aistudiocdn.com/three@^0.181.2",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
-    "@react-three/fiber": "https://aistudiocdn.com/@react-three/fiber@^9.4.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "@react-three/drei": "https://aistudiocdn.com/@react-three/drei@^10.7.7"
+    "@react-three/drei": "https://aistudiocdn.com/@react-three/drei@^10.7.7",
+    "@react-three/fiber": "https://aistudiocdn.com/@react-three/fiber@^9.4.2"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
+    <!-- 关键修复：添加 Vite 入口文件 -->
+    <script type="module" src="/index.tsx"></script>
+    
     <!-- Landscape Warning Overlay -->
     <div id="rotate-warning" class="fixed inset-0 z-[100] bg-black text-white flex-col items-center justify-center text-center p-6 hidden">
         <div class="text-4xl mb-4">📱 ➡️ 🔄</div>
