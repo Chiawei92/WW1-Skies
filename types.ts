@@ -33,6 +33,20 @@ declare global {
   namespace JSX {
     interface IntrinsicElements extends ThreeElements {
         primitive: any;
+        group: any;
+        mesh: any;
+        instancedMesh: any;
+        ambientLight: any;
+        directionalLight: any;
+        fog: any;
+        sphereGeometry: any;
+        meshStandardMaterial: any;
+        meshBasicMaterial: any;
+        boxGeometry: any;
+        planeGeometry: any;
+        coneGeometry: any;
+        cylinderGeometry: any;
+        color: any;
     }
   }
 }

@@ -40,8 +40,8 @@
 </head>
   <body>
     <div id="root"></div>
-    <!-- Vercel 部署使用绝对路径 -->
-    <script type="module" src="/index.tsx"></script>
+    <!-- 使用相对路径引用入口文件，兼容所有部署环境 -->
+    <script type="module" src="./index.tsx"></script>
     
     <!-- Landscape Warning Overlay -->
     <div id="rotate-warning" class="fixed inset-0 z-[100] bg-black text-white flex-col items-center justify-center text-center p-6 hidden">
