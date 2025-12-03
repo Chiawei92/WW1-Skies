@@ -17,7 +17,6 @@ interface AllyPlaneProps {
 }
 
 const MAX_BULLETS = 20;
-// Reduced to 43 (approx 80km/h) to match player
 const MAX_SPEED = 43; 
 
 const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemies, enemyPositionsRef, onEnemyHit, paused, allyIndex }) => {
@@ -43,10 +42,11 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
   const lastShotTime = useRef(0);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // --- Audio System ---
+  // --- Audio System with 3D Spatialization ---
   const audioContextRef = useRef<AudioContext | null>(null);
   const engineOscRef = useRef<OscillatorNode | null>(null);
   const engineGainRef = useRef<GainNode | null>(null);
+  const pannerNodeRef = useRef<PannerNode | null>(null); // NEW: 3D Panner
   const noiseBufferRef = useRef<AudioBuffer | null>(null);
 
   useEffect(() => {
@@ -55,20 +55,32 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
       const ctx = new AudioContext();
       audioContextRef.current = ctx;
 
+      // 1. Setup Panner
+      const panner = ctx.createPanner();
+      panner.panningModel = 'HRTF';
+      panner.distanceModel = 'exponential';
+      panner.refDistance = 50;
+      panner.maxDistance = 2000;
+      panner.rolloffFactor = 1.0;
+      panner.connect(ctx.destination);
+      pannerNodeRef.current = panner;
+
+      // 2. Engine Sound
       const osc = ctx.createOscillator();
       osc.type = 'sawtooth';
-      osc.frequency.value = 12.5; // Reduced from 25
+      osc.frequency.value = 12.5;
 
       const gain = ctx.createGain();
-      gain.gain.value = 0;
+      gain.gain.value = 0.1;
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(panner); // Connect to Panner
       osc.start();
 
       engineOscRef.current = osc;
       engineGainRef.current = gain;
 
+      // 3. Gunshot Noise Buffer
       const bufferSize = ctx.sampleRate * 0.5;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -86,7 +98,7 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
   }, [paused]);
 
   const playGunshot = () => {
-     if (paused || !audioContextRef.current || !noiseBufferRef.current) return;
+     if (paused || !audioContextRef.current || !noiseBufferRef.current || !pannerNodeRef.current) return;
      const ctx = audioContextRef.current;
      const source = ctx.createBufferSource();
      source.buffer = noiseBufferRef.current;
@@ -98,7 +110,7 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
      source.connect(filter);
      filter.connect(gain);
-     gain.connect(ctx.destination);
+     gain.connect(pannerNodeRef.current); // Connect to Panner
      source.start();
   };
 
@@ -107,21 +119,43 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
     const dt = Math.min(delta, 0.1);
     const time = stateRoot.clock.getElapsedTime();
 
+    // --- 3D AUDIO UPDATE ---
+    if (pannerNodeRef.current && engineOscRef.current && audioContextRef.current) {
+        const panner = pannerNodeRef.current;
+        const currentPos = position.current;
+        
+        if(panner.positionX) {
+            panner.positionX.value = currentPos.x;
+            panner.positionY.value = currentPos.y;
+            panner.positionZ.value = currentPos.z;
+        } else {
+            panner.setPosition(currentPos.x, currentPos.y, currentPos.z);
+        }
+
+        // --- SIMULATED DOPPLER ---
+        // Assume player listener is updated by Airplane.tsx
+        // Simplified Logic: if flying North (Z-) and player is South (Z+), closing speed is high
+        const forward = new Vector3(0, 0, -1).applyQuaternion(quaternion.current);
+        // We don't have player pos here explicitly to calc dot product easily without prop drilling player velocity
+        // But we can just use engine RPM pitch up based on speed for now + simple spatial distance
+        // For allies, let's keep it simple: Pitch relates to speed
+        
+        const baseFreq = 15 + speed.current;
+        engineOscRef.current.frequency.setTargetAtTime(baseFreq, audioContextRef.current.currentTime, 0.1);
+    }
+
     // --- State Logic ---
     if (state.current === 'WAIT') {
         if (playerSpeed > 5) { // Lower threshold to start
             state.current = 'TAKEOFF';
         }
     } else if (state.current === 'TAKEOFF') {
-        // Reduced acceleration again to match player (4 -> 1.5)
         speed.current += 1.5 * dt; 
         if (speed.current > MAX_SPEED) speed.current = MAX_SPEED;
         
-        // Move Forward
         const forward = new Vector3(0, 0, -1).applyQuaternion(quaternion.current);
         position.current.add(forward.clone().multiplyScalar(speed.current * dt));
 
-        // Gradual Pitch Up Logic
         const takeoffProgress = THREE.MathUtils.clamp((speed.current - 20) / 23, 0, 1);
         const targetPitch = takeoffProgress * THREE.MathUtils.degToRad(20);
         
@@ -129,13 +163,10 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
         const targetQ = new Quaternion().setFromEuler(new THREE.Euler(targetPitch, 0, 0));
         quaternion.current.slerp(targetQ, dt * 1.0);
         
-        // Transition to Combat
         if (position.current.y > 20) {
             state.current = 'COMBAT';
         }
     } else if (state.current === 'COMBAT') {
-        
-        // --- Target Selection Strategy ---
         const validEnemies = enemies
             .filter(e => enemyPositionsRef.current[e.id] !== undefined)
             .map(e => {
@@ -169,7 +200,6 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
         if (targetPos) {
             targetDir.subVectors(targetPos, position.current).normalize();
         } else {
-            // Patrol if no enemies
             const patrolCenter = new Vector3(...startPosition);
             patrolCenter.y = 100;
             patrolCenter.x += Math.sin(time * 0.2) * 500;
@@ -184,7 +214,6 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
         const forward = new Vector3(0, 0, -1).applyQuaternion(quaternion.current);
         position.current.add(forward.clone().multiplyScalar(speed.current * dt));
 
-        // Shoot at enemy
         if (targetPos && distToTarget < 400) {
              const angle = currentForward.angleTo(targetDir);
              if (angle < 0.3 && time - lastShotTime.current > 0.25) {
@@ -204,18 +233,14 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
         }
     }
 
-    // Apply Transforms
     groupRef.current.position.copy(position.current);
     groupRef.current.quaternion.copy(quaternion.current);
     
-    // Update Audio
-    if (engineGainRef.current && engineOscRef.current && audioContextRef.current) {
-        engineGainRef.current.gain.setTargetAtTime(0.02, audioContextRef.current.currentTime, 0.1);
-        // Reduced frequency calc (base 15 instead of 30)
-        engineOscRef.current.frequency.setTargetAtTime(15 + speed.current, audioContextRef.current.currentTime, 0.1);
+    // Update Audio Gain for fading
+    if (engineGainRef.current && audioContextRef.current) {
+        engineGainRef.current.gain.setTargetAtTime(0.05, audioContextRef.current.currentTime, 0.1);
     }
 
-    // Bullet Physics
     if (bulletMeshRef.current) {
         bullets.forEach((b, i) => {
             if (!b.active) {
@@ -227,10 +252,9 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
             b.position.addScaledVector(b.velocity, dt);
             b.life -= dt;
             
-            // Check Collision against enemies
             for(const enemy of enemies) {
                 const ePos = enemyPositionsRef.current[enemy.id];
-                if (ePos && b.position.distanceToSquared(ePos) < 16) { // Use closer Hitbox like player
+                if (ePos && b.position.distanceToSquared(ePos) < 16) { 
                     b.active = false;
                     onEnemyHit(enemy.id, ePos);
                 }

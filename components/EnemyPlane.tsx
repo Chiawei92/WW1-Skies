@@ -36,11 +36,6 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
   
   // Stats Config derived from difficulty
   const stats = useMemo(() => {
-      // Player Max Speed is approx 43. 
-      // Rookie: 50% (21.5)
-      // Veteran: 75% (32)
-      // Ace: 100% (43)
-      
       switch(difficulty) {
           case 'rookie':
               return { 
@@ -80,10 +75,11 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
   const lastShotTime = useRef(0);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // --- Audio System ---
+  // --- Audio System with 3D Spatialization ---
   const audioContextRef = useRef<AudioContext | null>(null);
   const engineOscRef = useRef<OscillatorNode | null>(null);
   const engineGainRef = useRef<GainNode | null>(null);
+  const pannerNodeRef = useRef<PannerNode | null>(null); // NEW: 3D Panner
   const noiseBufferRef = useRef<AudioBuffer | null>(null);
 
   // Initialize Audio
@@ -93,22 +89,32 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
       const ctx = new AudioContext();
       audioContextRef.current = ctx;
 
-      // 1. Engine Sound (Lower pitch sawtooth)
+      // 1. Setup Panner Node (The 3D Audio Source)
+      const panner = ctx.createPanner();
+      panner.panningModel = 'HRTF'; // High quality 3D
+      panner.distanceModel = 'exponential'; // Realistic drop-off
+      panner.refDistance = 50; // Distance where volume is 100%
+      panner.maxDistance = 2000;
+      panner.rolloffFactor = 1.0;
+      panner.connect(ctx.destination);
+      pannerNodeRef.current = panner;
+
+      // 2. Engine Sound (Lower pitch sawtooth)
       const osc = ctx.createOscillator();
       osc.type = 'sawtooth';
-      osc.frequency.value = 6.25; // Reduced from 12.5 (was 25, was 50)
+      osc.frequency.value = 6.25;
 
       const gain = ctx.createGain();
-      gain.gain.value = 0; // Start silent
+      gain.gain.value = 0.1; // Base volume, distance handles the rest
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(panner); // Connect to Panner instead of destination
       osc.start();
 
       engineOscRef.current = osc;
       engineGainRef.current = gain;
 
-      // 2. Gunshot Noise Buffer
+      // 3. Gunshot Noise Buffer
       const bufferSize = ctx.sampleRate * 0.5;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -138,7 +144,7 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
   }, [stats]);
 
   const playGunshot = () => {
-     if (paused || !audioContextRef.current || !noiseBufferRef.current) return;
+     if (paused || !audioContextRef.current || !noiseBufferRef.current || !pannerNodeRef.current) return;
      const ctx = audioContextRef.current;
      
      const source = ctx.createBufferSource();
@@ -149,18 +155,12 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
      filter.frequency.value = 800;
      
      const gain = ctx.createGain();
-     // Gunshot volume also depends on distance, simplified here
-     const dist = position.current.distanceTo(playerPosRef.current);
-     const volume = Math.max(0, 1 - dist / 500) * 0.1;
-     
-     if (volume <= 0.001) return;
-
-     gain.gain.setValueAtTime(volume, ctx.currentTime);
+     gain.gain.setValueAtTime(0.2, ctx.currentTime);
      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
      
      source.connect(filter);
      filter.connect(gain);
-     gain.connect(ctx.destination);
+     gain.connect(pannerNodeRef.current); // Connect gunshot to 3D panner
      source.start();
   };
 
@@ -179,41 +179,54 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
     const playerPos = playerPosRef.current;
     const distToPlayer = position.current.distanceTo(playerPos);
     
-    // --- Spatial Audio Update ---
-    if (engineGainRef.current && engineOscRef.current && audioContextRef.current) {
-        // Arcade Logic: Linear attenuation
-        const maxDist = 600;
-        const volume = Math.max(0, 1 - distToPlayer / maxDist) * 0.1; 
+    // --- 3D AUDIO UPDATE ---
+    if (pannerNodeRef.current && engineOscRef.current && audioContextRef.current) {
+        const panner = pannerNodeRef.current;
+        const currentPos = position.current;
         
-        // Doppler-ish effect (Halved base pitch to 5)
-        const pitch = 5 + (speed.current / 10) + (volume * 10);
+        // Update Panner Position
+        if(panner.positionX) {
+            panner.positionX.value = currentPos.x;
+            panner.positionY.value = currentPos.y;
+            panner.positionZ.value = currentPos.z;
+        } else {
+            panner.setPosition(currentPos.x, currentPos.y, currentPos.z);
+        }
 
-        engineGainRef.current.gain.setTargetAtTime(volume, audioContextRef.current.currentTime, 0.1);
-        engineOscRef.current.frequency.setTargetAtTime(pitch, audioContextRef.current.currentTime, 0.1);
+        // --- SIMULATED DOPPLER EFFECT ---
+        // Calculate relative velocity towards player
+        // (Simplified: assuming player velocity is roughly their forward vector * speed, but just using distance delta is easier)
+        // A better arcade approximation: Dot product of enemy velocity and vector to player.
+        
+        const toPlayer = new Vector3().subVectors(playerPos, currentPos).normalize();
+        const enemyForward = new Vector3(0, 0, -1).applyQuaternion(quaternion.current);
+        const closingSpeed = enemyForward.dot(toPlayer); // 1.0 = flying straight at player, -1.0 = flying away
+        
+        // Base Pitch + Doppler Shift
+        // If closing in (positive), pitch up. If flying away (negative), pitch down.
+        const baseFreq = 5 + (speed.current / 10);
+        const dopplerShift = closingSpeed * 2.0; // Shift by +/- 2Hz
+        const finalFreq = Math.max(1, baseFreq + dopplerShift);
+        
+        engineOscRef.current.frequency.setTargetAtTime(finalFreq, audioContextRef.current.currentTime, 0.1);
     }
 
     // 1. Determine State
-    // Ace Evasion Override
     if (difficulty === 'ace' && state.current === 'EVADE') {
         if (time > evasionEndTime.current) {
-            state.current = 'ATTACK'; // Return to attack after evasion
+            state.current = 'ATTACK'; 
         }
     } else if (time > nextDecisionTime.current) {
-        // Standard State Machine
         if (distToPlayer < stats.aggressionDist && Math.random() < stats.attackChance) {
             state.current = 'ATTACK';
         } else {
             state.current = 'PATROL';
         }
         
-        // Ace Difficulty: Random Evasion Check during Combat
-        // If we are close and being chased (simplified by checking if player is looking at us roughly), EVADE
         if (difficulty === 'ace' && distToPlayer < 400 && Math.random() > 0.6) {
              state.current = 'EVADE';
-             evasionEndTime.current = time + 1.0 + Math.random(); // Evade for 1-2 seconds
+             evasionEndTime.current = time + 1.0 + Math.random(); 
         }
-
-        // Increased decision time
         nextDecisionTime.current = time + 2.0 + Math.random() * 2.0; 
     }
 
@@ -221,21 +234,18 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
     const targetDir = new Vector3();
     
     if (state.current === 'EVADE') {
-        // Fly perpendicular to player + random up/down
         const toPlayer = new Vector3().subVectors(playerPos, position.current).normalize();
         const up = new Vector3(0, 1, 0);
         const right = new Vector3().crossVectors(toPlayer, up).normalize();
         if (Math.random() > 0.5) right.negate();
-        
         targetDir.copy(right).add(new Vector3(0, (Math.random()-0.5)*2, 0)).normalize();
         
     } else if (state.current === 'ATTACK') {
         targetDir.subVectors(playerPos, position.current).normalize();
     } else {
         const patrolCenter = new Vector3(...startPosition);
-        // Use seed to offset phase
         const phase = seed.current;
-        patrolCenter.x += Math.sin(time * 0.15 + phase) * 400; // Slower patrol weave
+        patrolCenter.x += Math.sin(time * 0.15 + phase) * 400; 
         patrolCenter.z += Math.cos(time * 0.15 + phase) * 400;
         targetDir.subVectors(patrolCenter, position.current).normalize();
     }
@@ -244,7 +254,6 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
     const currentForward = new Vector3(0, 0, -1).applyQuaternion(quaternion.current);
     const targetQuat = new Quaternion().setFromUnitVectors(new Vector3(0, 0, -1), targetDir);
     
-    // Ace turns faster during evasion
     const effectiveTurnSpeed = state.current === 'EVADE' ? stats.turnSpeed * 1.5 : stats.turnSpeed;
     quaternion.current.slerp(targetQuat, effectiveTurnSpeed * dt);
 
@@ -257,10 +266,8 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
     groupRef.current.quaternion.copy(quaternion.current);
 
     // --- Shooting Logic ---
-    // Only shoot in Attack mode (or Ace Evade mode if lucky)
     if ((state.current === 'ATTACK' || (difficulty === 'ace' && state.current === 'EVADE')) && distToPlayer < 400) {
         const angle = currentForward.angleTo(targetDir);
-        // Aces have wider firing angle tolerance (snap shooting)
         const angleTol = difficulty === 'ace' ? 0.35 : 0.2;
         
         if (angle < angleTol) { 
@@ -270,11 +277,9 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
                     bullet.active = true;
                     bullet.life = 1.5;
                     bullet.position.copy(position.current);
-                    // Bullet speed matches aggression
                     const bulletSpeedBonus = difficulty === 'ace' ? 250 : 150;
                     bullet.velocity.copy(forward).multiplyScalar(speed.current + bulletSpeedBonus);
                     
-                    // Accuracy spread (Aces are more accurate)
                     const spread = difficulty === 'ace' ? 2 : (difficulty === 'rookie' ? 12 : 8);
                     bullet.velocity.x += (Math.random() - 0.5) * spread; 
                     bullet.velocity.y += (Math.random() - 0.5) * spread;
@@ -299,7 +304,6 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
             b.position.addScaledVector(b.velocity, dt);
             b.life -= dt;
 
-            // Hit Check against Player
             if (b.position.distanceTo(playerPos) < 5) {
                 b.active = false;
                 onHitPlayer();

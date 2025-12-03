@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useMemo, useLayoutEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
@@ -316,7 +317,8 @@ const Airplane: React.FC<AirplaneProps> = ({
       filter.frequency.value = 1000;
       
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      // Increased gun volume by ~30% (0.15 * 1.3 ≈ 0.2)
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15); 
       
       source.connect(filter);
@@ -397,6 +399,33 @@ const Airplane: React.FC<AirplaneProps> = ({
             gainNodeRef.current.gain.setTargetAtTime(0, audioContextRef.current.currentTime, 0.1);
         }
         return;
+    }
+
+    // --- UPDATE AUDIO LISTENER (THE PLAYER EARS) ---
+    // We update the audio listener to match the player's position and rotation
+    // This allows the PannerNodes in enemy planes to calculate 3D audio correctly
+    if (audioContextRef.current) {
+        const listener = audioContextRef.current.listener;
+        const pos = plane.position;
+        const forward = new Vector3(0, 0, -1).applyQuaternion(plane.quaternion);
+        const up = new Vector3(0, 1, 0).applyQuaternion(plane.quaternion);
+        
+        // Handle API differences in browsers
+        if (listener.positionX) {
+            listener.positionX.value = pos.x;
+            listener.positionY.value = pos.y;
+            listener.positionZ.value = pos.z;
+            listener.forwardX.value = forward.x;
+            listener.forwardY.value = forward.y;
+            listener.forwardZ.value = forward.z;
+            listener.upX.value = up.x;
+            listener.upY.value = up.y;
+            listener.upZ.value = up.z;
+        } else if ((listener as any).setPosition) {
+             // Legacy
+             (listener as any).setPosition(pos.x, pos.y, pos.z);
+             (listener as any).setOrientation(forward.x, forward.y, forward.z, up.x, up.y, up.z);
+        }
     }
 
     playerPosRef.current.copy(plane.position);

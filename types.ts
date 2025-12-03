@@ -1,3 +1,5 @@
+import React from 'react';
+
 export interface GameState {
   speed: number;
   altitude: number;
@@ -36,6 +38,8 @@ declare global {
         instancedMesh: any;
         ambientLight: any;
         directionalLight: any;
+        pointLight: any;
+        spotLight: any;
         fog: any;
         sphereGeometry: any;
         meshStandardMaterial: any;
