@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Ace Squadron: WWI Skies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #87CEEB; touch-action: none; }
+      #root { width: 100%; height: 100%; }
+      /* Hide cursor during gameplay usually */
+      .game-cursor-none { cursor: none; }
+      
+      /* Landscape Warning Overlay */
+      #rotate-warning {
+        display: none;
+      }
+      
+      @media only screen and (orientation: portrait) and (max-width: 1024px) {
+        #rotate-warning {
+          display: flex;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "three": "https://aistudiocdn.com/three@^0.181.2",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@react-three/fiber": "https://aistudiocdn.com/@react-three/fiber@^9.4.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@react-three/drei": "https://aistudiocdn.com/@react-three/drei@^10.7.7"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <!-- Landscape Warning Overlay -->
+    <div id="rotate-warning" class="fixed inset-0 z-[100] bg-black text-white flex-col items-center justify-center text-center p-6 hidden">
+        <div class="text-4xl mb-4">📱 ➡️ 🔄</div>
+        <h2 class="text-2xl font-bold text-yellow-500 mb-2">请旋转手机</h2>
+        <p class="text-gray-300">为了获得最佳驾驶体验，请将设备横屏使用。</p>
+    </div>
+  </body>
+</html>
