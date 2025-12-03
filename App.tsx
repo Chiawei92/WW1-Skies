@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import GameCanvas from './components/GameCanvas';
 import { Difficulty } from './types';
@@ -38,11 +37,17 @@ const App: React.FC = () => {
   };
 
   const startGame = () => {
-      // 1. Request Fullscreen (Must be triggered by user interaction)
-      const docEl = document.documentElement;
-      if (docEl.requestFullscreen) {
-          docEl.requestFullscreen().catch((err) => {
-              console.log("Fullscreen request failed (likely iOS or blocked):", err);
+      // 1. Request Fullscreen (Robust cross-browser method)
+      const docEl = document.documentElement as any;
+      const requestFullScreen = 
+          docEl.requestFullscreen || 
+          docEl.webkitRequestFullscreen || 
+          docEl.mozRequestFullScreen || 
+          docEl.msRequestFullscreen;
+
+      if (requestFullScreen) {
+          requestFullScreen.call(docEl).catch((err: any) => {
+              console.log("Fullscreen request failed (likely iOS or user blocked):", err);
           });
       }
       
@@ -86,6 +91,7 @@ const App: React.FC = () => {
             {isMobile && (
                  <div className="mb-6 p-2 bg-blue-900/30 border border-blue-500 rounded text-sm text-blue-200">
                      📱 检测到移动设备，已自动启用触屏控制模式。
+                     <br/><span className="text-xs text-blue-300">(建议 Safari 用户添加到主屏幕以全屏游玩)</span>
                  </div>
             )}
 

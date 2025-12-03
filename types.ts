@@ -1,5 +1,3 @@
-import { ThreeElements } from '@react-three/fiber';
-
 export interface GameState {
   speed: number;
   altitude: number;
@@ -31,7 +29,7 @@ export interface MobileInputState {
 
 declare global {
   namespace JSX {
-    interface IntrinsicElements extends ThreeElements {
+    interface IntrinsicElements {
         primitive: any;
         group: any;
         mesh: any;

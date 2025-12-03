@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useMemo, useLayoutEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
@@ -427,12 +426,13 @@ const Airplane: React.FC<AirplaneProps> = ({
 
     if (isMobile) {
         // Mobile Joystick
-        // Joystick Y is standard screen coords (Down is Positive).
-        // Flight Sim: Pull Stick Back (Down) = Pitch Up.
-        // So Positive Y = Pitch Up. 
-        // We just map stickY directly to pitch input.
         targetPitch = mobileInputRef.current.stickY;
-        targetRoll = mobileInputRef.current.stickX;
+        // Invert stickX for Roll so pushing stick Right rolls plane Right (which is clockwise, negative angle).
+        // Original logic was Roll = stickX. Positive Roll = Left Roll in flight sims usually? 
+        // Three.js Z rotation positive = Counter Clockwise = Left Roll.
+        // Stick Right (X=1) -> we want Right Roll (Z Rotation < 0).
+        // So targetRoll should be negative of stickX.
+        targetRoll = -mobileInputRef.current.stickX;
     } else if (controlMode === 'keyboard') {
         targetPitch = (keys.current['s'] ? 1 : 0) - (keys.current['w'] ? 1 : 0);
         targetRoll = (keys.current['d'] ? -1 : 0) + (keys.current['a'] ? 1 : 0);

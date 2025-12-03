@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { MobileInputState } from '../types';
 
@@ -38,6 +37,7 @@ const MobileControls: React.FC<MobileControlsProps> = ({ inputRef }) => {
         if (touchId === null) return;
         
         let touch: React.Touch | undefined;
+        // Manual iteration for TypeScript safety with TouchList
         for (let i = 0; i < e.changedTouches.length; i++) {
             if (e.changedTouches[i].identifier === touchId) {
                 touch = e.changedTouches[i];
@@ -109,54 +109,56 @@ const MobileControls: React.FC<MobileControlsProps> = ({ inputRef }) => {
                 {/* Left Stick Area */}
                 <div 
                     ref={joystickRef}
-                    className="w-40 h-40 bg-white/10 rounded-full border-2 border-white/30 backdrop-blur-sm relative pointer-events-auto touch-none flex items-center justify-center"
+                    className="w-40 h-40 bg-white/5 rounded-full border border-white/20 backdrop-blur-sm relative pointer-events-auto touch-none flex items-center justify-center"
                     onTouchStart={handleStickStart}
                     onTouchMove={handleStickMove}
                     onTouchEnd={handleStickEnd}
                 >
-                    {/* Stick Knob */}
+                    {/* Stick Knob - Glass Style */}
                     <div 
-                        className="w-16 h-16 bg-yellow-500/80 rounded-full shadow-lg absolute transition-transform duration-75 ease-out"
+                        className="w-16 h-16 bg-white/20 rounded-full shadow-lg border border-white/30 backdrop-blur-md absolute transition-transform duration-75 ease-out"
                         style={{ transform: `translate(${joystickPos.x}px, ${joystickPos.y}px)` }}
                     ></div>
-                    {/* Decor */}
-                    <div className="absolute text-white/50 text-xs font-bold top-2">俯冲</div>
-                    <div className="absolute text-white/50 text-xs font-bold bottom-2">拉升</div>
-                    <div className="absolute text-white/50 text-xs font-bold left-2">左滚</div>
-                    <div className="absolute text-white/50 text-xs font-bold right-2">右滚</div>
+                    {/* Decor Labels */}
+                    <div className="absolute text-white/30 text-[10px] font-mono font-bold top-4">DIVE</div>
+                    <div className="absolute text-white/30 text-[10px] font-mono font-bold bottom-4">CLIMB</div>
+                    <div className="absolute text-white/30 text-[10px] font-mono font-bold left-4">L</div>
+                    <div className="absolute text-white/30 text-[10px] font-mono font-bold right-4">R</div>
                 </div>
 
                 {/* Right Controls Group */}
                 <div className="flex gap-6 items-end pointer-events-auto">
                     
-                    {/* Fire Button */}
+                    {/* Fire Button - Glass Red Style */}
                     <div 
-                        className="w-24 h-24 bg-red-600/80 rounded-full border-4 border-red-800 shadow-lg active:scale-95 transition-transform flex items-center justify-center touch-none"
+                        className="w-24 h-24 bg-red-500/20 rounded-full border border-red-400/50 backdrop-blur-md shadow-lg active:bg-red-500/40 active:scale-95 transition-all flex items-center justify-center touch-none"
                         onTouchStart={() => inputRef.current.firing = true}
                         onTouchEnd={() => inputRef.current.firing = false}
                     >
-                         <span className="text-white font-black text-xl">FIRE</span>
+                         <div className="w-20 h-20 rounded-full border border-red-400/30 flex items-center justify-center">
+                            <span className="text-white/80 font-black text-sm tracking-widest">FIRE</span>
+                         </div>
                     </div>
 
-                    {/* Throttle Slider */}
+                    {/* Throttle Slider - Glass Style */}
                     <div 
                         ref={throttleRef}
-                        className="w-16 h-48 bg-black/40 rounded-lg border border-white/30 relative overflow-hidden touch-none"
+                        className="w-16 h-48 bg-black/20 rounded-lg border border-white/20 backdrop-blur-sm relative overflow-hidden touch-none"
                         onTouchStart={handleThrottleMove}
                         onTouchMove={handleThrottleMove}
                     >
                         {/* Fill */}
                         <div 
-                            className="absolute bottom-0 w-full bg-gradient-to-t from-green-600 to-yellow-500 transition-all duration-75"
+                            className="absolute bottom-0 w-full bg-white/20 transition-all duration-75"
                             style={{ height: `${throttleVis}%` }}
                         ></div>
                         {/* Handle */}
-                        <div className="absolute w-full h-8 bg-white/50 border-y border-white top-0 mt-[-16px]" style={{ top: `${100 - throttleVis}%` }}></div>
+                        <div className="absolute w-full h-8 bg-white/40 border-y border-white/50 top-0 mt-[-16px] backdrop-blur-md shadow-sm" style={{ top: `${100 - throttleVis}%` }}></div>
                         
-                        <div className="absolute inset-0 flex flex-col justify-between items-center py-2 text-[10px] text-white/70 font-mono pointer-events-none">
-                            <span>MAX</span>
+                        <div className="absolute inset-0 flex flex-col justify-between items-center py-3 text-[10px] text-white/50 font-mono pointer-events-none">
+                            <span>100</span>
                             <span>THR</span>
-                            <span>IDLE</span>
+                            <span>0</span>
                         </div>
                     </div>
 
