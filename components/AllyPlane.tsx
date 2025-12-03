@@ -59,7 +59,7 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
       const panner = ctx.createPanner();
       panner.panningModel = 'HRTF';
       panner.distanceModel = 'exponential';
-      panner.refDistance = 50;
+      panner.refDistance = 100;
       panner.maxDistance = 2000;
       panner.rolloffFactor = 1.0;
       panner.connect(ctx.destination);
@@ -135,10 +135,6 @@ const AllyPlane: React.FC<AllyPlaneProps> = ({ startPosition, playerSpeed, enemi
         // --- SIMULATED DOPPLER ---
         // Assume player listener is updated by Airplane.tsx
         // Simplified Logic: if flying North (Z-) and player is South (Z+), closing speed is high
-        const forward = new Vector3(0, 0, -1).applyQuaternion(quaternion.current);
-        // We don't have player pos here explicitly to calc dot product easily without prop drilling player velocity
-        // But we can just use engine RPM pitch up based on speed for now + simple spatial distance
-        // For allies, let's keep it simple: Pitch relates to speed
         
         const baseFreq = 15 + speed.current;
         engineOscRef.current.frequency.setTargetAtTime(baseFreq, audioContextRef.current.currentTime, 0.1);

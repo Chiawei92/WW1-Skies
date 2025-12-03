@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import GameCanvas from './components/GameCanvas';
 import { Difficulty } from './types';
@@ -37,18 +38,28 @@ const App: React.FC = () => {
   };
 
   const startGame = () => {
-      // 1. Request Fullscreen (Robust cross-browser method)
-      const docEl = document.documentElement as any;
-      const requestFullScreen = 
-          docEl.requestFullscreen || 
-          docEl.webkitRequestFullscreen || 
-          docEl.mozRequestFullScreen || 
-          docEl.msRequestFullscreen;
+      // 1. Request Fullscreen ONLY IF MOBILE
+      if (isMobile) {
+          const docEl = document.documentElement as any;
+          const requestFullScreen = 
+              docEl.requestFullscreen || 
+              docEl.webkitRequestFullscreen || 
+              docEl.mozRequestFullScreen || 
+              docEl.msRequestFullscreen;
 
-      if (requestFullScreen) {
-          requestFullScreen.call(docEl).catch((err: any) => {
-              console.log("Fullscreen request failed (likely iOS or user blocked):", err);
-          });
+          if (requestFullScreen) {
+              try {
+                  const promise = requestFullScreen.call(docEl);
+                  // Only attach catch if it returns a Promise
+                  if (promise && typeof promise.catch === 'function') {
+                      promise.catch((err: any) => {
+                          console.log("Mobile fullscreen request failed:", err);
+                      });
+                  }
+              } catch (e) {
+                  console.log("Fullscreen error:", e);
+              }
+          }
       }
       
       // 2. Start Game state

@@ -168,7 +168,8 @@ const Airplane: React.FC<AirplaneProps> = ({
   // Telemetry Throttle Ref
   const lastTelemetryUpdate = useRef(0);
 
-  useMemo(() => {
+  // Lazy Initialization of bullets
+  if (bulletsRef.current.length === 0) {
       bulletsRef.current = new Array(MAX_BULLETS).fill(0).map((_, i) => ({
           id: i,
           active: false,
@@ -177,7 +178,7 @@ const Airplane: React.FC<AirplaneProps> = ({
           velocity: new Vector3(),
           life: 0
       }));
-  }, []);
+  }
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscEngineRef = useRef<OscillatorNode | null>(null);
@@ -317,8 +318,8 @@ const Airplane: React.FC<AirplaneProps> = ({
       filter.frequency.value = 1000;
       
       const gain = ctx.createGain();
-      // Increased gun volume by ~30% (0.15 * 1.3 ≈ 0.2)
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      // Increased gun volume by 30% from 0.2 to ~0.3 (0.2 * 1.3 = 0.26, let's go 0.3 for clear effect)
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15); 
       
       source.connect(filter);
@@ -456,12 +457,13 @@ const Airplane: React.FC<AirplaneProps> = ({
     if (isMobile) {
         // Mobile Joystick
         targetPitch = mobileInputRef.current.stickY;
-        // Invert stickX for Roll so pushing stick Right rolls plane Right (which is clockwise, negative angle).
-        // Original logic was Roll = stickX. Positive Roll = Left Roll in flight sims usually? 
-        // Three.js Z rotation positive = Counter Clockwise = Left Roll.
-        // Stick Right (X=1) -> we want Right Roll (Z Rotation < 0).
-        // So targetRoll should be negative of stickX.
-        targetRoll = -mobileInputRef.current.stickX;
+        // User requested to fix "reversed" roll. 
+        // Previously we had `-mobileInputRef.current.stickX`.
+        // If Stick is Right (X > 0). Right Roll = Clockwise = Negative Z rotation.
+        // If the user says it's reversed, they expect Stick Right = Roll Right.
+        // If the previous code was inverted, maybe the input from joystick wasn't what we thought.
+        // Let's remove the inversion.
+        targetRoll = mobileInputRef.current.stickX;
     } else if (controlMode === 'keyboard') {
         targetPitch = (keys.current['s'] ? 1 : 0) - (keys.current['w'] ? 1 : 0);
         targetRoll = (keys.current['d'] ? -1 : 0) + (keys.current['a'] ? 1 : 0);

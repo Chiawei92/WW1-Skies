@@ -93,7 +93,7 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
       const panner = ctx.createPanner();
       panner.panningModel = 'HRTF'; // High quality 3D
       panner.distanceModel = 'exponential'; // Realistic drop-off
-      panner.refDistance = 50; // Distance where volume is 100%
+      panner.refDistance = 100; // Increased distance so you hear them well before they are on top of you
       panner.maxDistance = 2000;
       panner.rolloffFactor = 1.0;
       panner.connect(ctx.destination);
@@ -195,9 +195,6 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
 
         // --- SIMULATED DOPPLER EFFECT ---
         // Calculate relative velocity towards player
-        // (Simplified: assuming player velocity is roughly their forward vector * speed, but just using distance delta is easier)
-        // A better arcade approximation: Dot product of enemy velocity and vector to player.
-        
         const toPlayer = new Vector3().subVectors(playerPos, currentPos).normalize();
         const enemyForward = new Vector3(0, 0, -1).applyQuaternion(quaternion.current);
         const closingSpeed = enemyForward.dot(toPlayer); // 1.0 = flying straight at player, -1.0 = flying away
@@ -205,7 +202,7 @@ const EnemyPlane: React.FC<EnemyPlaneProps> = ({ id, startPosition, playerPosRef
         // Base Pitch + Doppler Shift
         // If closing in (positive), pitch up. If flying away (negative), pitch down.
         const baseFreq = 5 + (speed.current / 10);
-        const dopplerShift = closingSpeed * 2.0; // Shift by +/- 2Hz
+        const dopplerShift = closingSpeed * 4.0; // Increased to 4.0 for more dramatic whoosh
         const finalFreq = Math.max(1, baseFreq + dopplerShift);
         
         engineOscRef.current.frequency.setTargetAtTime(finalFreq, audioContextRef.current.currentTime, 0.1);

@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { MobileInputState } from '../types';
 
@@ -64,10 +65,6 @@ const MobileControls: React.FC<MobileControlsProps> = ({ inputRef }) => {
         setJoystickPos({ x: newX, y: newY });
         
         // Normalize -1 to 1
-        // Invert Y because screen Y down is positive, but standard flight stick Up is negative (pitch down)
-        // However, we want "Pull Down to Climb". So Screen Down (+Y) = Climb. 
-        // Logic in Airplane: Pitch Input > 0 = Climb (S key). 
-        // So we send +Y as +Pitch.
         inputRef.current.stickX = newX / RADIUS;
         inputRef.current.stickY = newY / RADIUS; 
     };
@@ -129,13 +126,13 @@ const MobileControls: React.FC<MobileControlsProps> = ({ inputRef }) => {
                 {/* Right Controls Group */}
                 <div className="flex gap-6 items-end pointer-events-auto">
                     
-                    {/* Fire Button - Glass Red Style */}
+                    {/* Fire Button - Clean Glass Style */}
                     <div 
-                        className="w-24 h-24 bg-red-500/20 rounded-full border border-red-400/50 backdrop-blur-md shadow-lg active:bg-red-500/40 active:scale-95 transition-all flex items-center justify-center touch-none"
+                        className="w-24 h-24 bg-white/10 rounded-full border border-white/20 backdrop-blur-md shadow-lg active:bg-white/30 active:scale-95 transition-all flex items-center justify-center touch-none"
                         onTouchStart={() => inputRef.current.firing = true}
                         onTouchEnd={() => inputRef.current.firing = false}
                     >
-                         <div className="w-20 h-20 rounded-full border border-red-400/30 flex items-center justify-center">
+                         <div className="w-20 h-20 rounded-full border border-white/20 flex items-center justify-center">
                             <span className="text-white/80 font-black text-sm tracking-widest">FIRE</span>
                          </div>
                     </div>
@@ -143,7 +140,7 @@ const MobileControls: React.FC<MobileControlsProps> = ({ inputRef }) => {
                     {/* Throttle Slider - Glass Style */}
                     <div 
                         ref={throttleRef}
-                        className="w-16 h-48 bg-black/20 rounded-lg border border-white/20 backdrop-blur-sm relative overflow-hidden touch-none"
+                        className="w-16 h-48 bg-white/5 rounded-lg border border-white/20 backdrop-blur-sm relative overflow-hidden touch-none"
                         onTouchStart={handleThrottleMove}
                         onTouchMove={handleThrottleMove}
                     >

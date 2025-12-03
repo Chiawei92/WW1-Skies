@@ -72,6 +72,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ controlMode, setControlMode, di
       });
   };
 
+  const toggleFullscreen = () => {
+      const doc = document as any;
+      if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+          const docEl = document.documentElement as any;
+          const request = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
+          if (request) request.call(docEl);
+      } else {
+          const exit = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+          if (exit) exit.call(doc);
+      }
+  };
+
   return (
     <>
       <Canvas
@@ -107,18 +119,26 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ controlMode, setControlMode, di
                     <h2 className="text-2xl font-bold text-white mb-4 uppercase tracking-widest">任务暂停</h2>
 
                     {!isMobile && (
-                        <div className="flex justify-center gap-4 mb-6">
+                        <div className="flex flex-col gap-2 mb-6">
+                            <div className="flex justify-center gap-4">
+                                <button 
+                                    onClick={() => setControlMode('keyboard')}
+                                    className={`px-4 py-2 rounded border ${controlMode === 'keyboard' ? 'bg-yellow-600 text-black border-yellow-600' : 'bg-transparent text-gray-400 border-gray-600 hover:border-yellow-600'}`}
+                                >
+                                    键盘
+                                </button>
+                                <button 
+                                    onClick={() => setControlMode('mouse')}
+                                    className={`px-4 py-2 rounded border ${controlMode === 'mouse' ? 'bg-yellow-600 text-black border-yellow-600' : 'bg-transparent text-gray-400 border-gray-600 hover:border-yellow-600'}`}
+                                >
+                                    鼠标
+                                </button>
+                            </div>
                             <button 
-                                onClick={() => setControlMode('keyboard')}
-                                className={`px-4 py-2 rounded border ${controlMode === 'keyboard' ? 'bg-yellow-600 text-black border-yellow-600' : 'bg-transparent text-gray-400 border-gray-600 hover:border-yellow-600'}`}
+                                onClick={toggleFullscreen}
+                                className="mx-auto mt-2 px-3 py-1 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-white rounded transition-colors"
                             >
-                                键盘
-                            </button>
-                            <button 
-                                onClick={() => setControlMode('mouse')}
-                                className={`px-4 py-2 rounded border ${controlMode === 'mouse' ? 'bg-yellow-600 text-black border-yellow-600' : 'bg-transparent text-gray-400 border-gray-600 hover:border-yellow-600'}`}
-                            >
-                                鼠标
+                                🖥️ 切换全屏显示
                             </button>
                         </div>
                     )}
